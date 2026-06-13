@@ -70,6 +70,21 @@ class AntToBleBridge {
                     }
                 }))
 
+                antConnectors.add(PwrConnector(service, object: AntDeviceConnector.DeviceManagerListener<AntDevice.PwrDevice> {
+                    override fun onDeviceStateChanged(result: RequestAccessResult, deviceState: DeviceState) {
+                    }
+
+                    override fun onDataUpdated(data: AntDevice.PwrDevice) {
+                        dataUpdated(data, BleServiceType.CpService, callback) {
+                            return@dataUpdated PwrConnector(service, this)
+                        }
+                    }
+
+                    override fun onCombinedSensor(antDeviceConnector: AntDeviceConnector<*, *>, deviceId: Int) {
+                        // Not supported
+                    }
+                }))
+
                 antConnectors.forEach { connector -> connector.startSearch() }
             }
         }
