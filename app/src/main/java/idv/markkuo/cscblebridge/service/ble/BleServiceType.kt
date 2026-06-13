@@ -219,15 +219,31 @@ sealed class BleServiceType(val serviceId: UUID, val measurement: UUID, val feat
                 throw IllegalArgumentException("Unable to get BLE Data for power device with $antDevice")
             }
 
+            // Flags (uint16, little-endian).
+            // Bit 5 (0x20) = "Crank Revolution Data Present" -> lets apps derive cadence.
+            val crankPresent = antDevice.cumulativeCrankRevolution > 0
+            val flagsLow: Int = if (crankPresent) 0x20 else 0x00
+
             val data: MutableList<Byte> = ArrayList()
-            // Flags (uint16, little-endian): all zero = only Instantaneous Power present
-            data.add(0.toByte())
+            data.add(flagsLow.toByte())
             data.add(0.toByte())
 
             // Instantaneous Power (sint16, watt, little-endian)
             val power = antDevice.instantaneousPower
             data.add(power.toByte())
             data.add((power shr java.lang.Byte.SIZE).toByte())
+
+            if (crankPresent) {
+                // Cumulative Crank Revolutions (uint16, little-endian)
+                val crank = antDevice.cumulativeCrankRevolution
+                data.add(crank.toByte())
+                data.add((crank shr java.lang.Byte.SIZE).toByte())
+
+                // Last Crank Event Time (uint16, unit 1/1024s, little-endian)
+                val eventTime = antDevice.lastCrankEventTime
+                data.add(eventTime.toByte())
+                data.add((eventTime shr java.lang.Byte.SIZE).toByte())
+            }
 
             // convert to primitive byte array
             val byteArray = ByteArray(data.size)
