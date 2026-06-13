@@ -6,6 +6,13 @@ import com.dsi.ant.plugins.antplus.pccbase.AntPluginPcc
 import com.dsi.ant.plugins.antplus.pccbase.PccReleaseHandle
 
 class PwrConnector(context: Context, listener: DeviceManagerListener<AntDevice.PwrDevice>): AntDeviceConnector<AntPlusBikePowerPcc, AntDevice.PwrDevice>(context, listener) {
+
+    // Per-device state for synthesizing crank revolution data from instantaneous cadence.
+    // Most pedal/crank power meters only broadcast "power-only" pages and instantaneous
+    // cadence (RPM), without raw crank torque, so we accumulate revolutions ourselves.
+    private val lastCadenceTimestamp = HashMap<Int, Long>()
+    private val crankRevAccumulator = HashMap<Int, Double>()
+
     override fun requestAccess(context: Context, resultReceiver: AntPluginPcc.IPluginAccessResultReceiver<AntPlusBikePowerPcc>, stateChangedReceiver: AntPluginPcc.IDeviceStateChangeReceiver, deviceNumber: Int): PccReleaseHandle<AntPlusBikePowerPcc> {
         return AntPlusBikePowerPcc.requestAccess(context, deviceNumber, 0, resultReceiver, stateChangedReceiver)
     }
@@ -19,23 +26,28 @@ class PwrConnector(context: Context, listener: DeviceManagerListener<AntDevice.P
             listener.onDataUpdated(device)
         }
 
-        // Instantaneous cadence (RPM) for display purposes.
+        // Instantaneous cadence (RPM). We use this both for display and to synthesize the
+        // cumulative crank revolution count + last crank event time that BLE Cycling Power
+        // needs, so that TrainerRoad/Zwift can show cadence.
         pcc.subscribeInstantaneousCadenceEvent { estTimestamp, _, _, instantaneousCadence ->
             val device = getDevice(pcc)
+            val id = pcc.antDeviceNumber
             device.instantaneousCadence = instantaneousCadence
-            device.pwrTimestamp = estTimestamp
-            listener.onDataUpdated(device)
-        }
 
-        // Raw crank torque data carries the cumulative crank revolution count, which is what
-        // the BLE Cycling Power Measurement needs so that apps (TrainerRoad/Zwift) can derive
-        // cadence themselves. accumulatedCrankTicks = cumulative crank revolutions.
-        pcc.subscribeRawCrankTorqueDataEvent { estTimestamp, _, _, accumulatedCrankTicks, _, _ ->
-            val device = getDevice(pcc)
-            device.cumulativeCrankRevolution = accumulatedCrankTicks
-            // BLE "Last Crank Event Time" is in 1/1024s units (uint16, wraps around).
-            // Derive it from the ANT+ estimated timestamp (milliseconds).
-            device.lastCrankEventTime = ((estTimestamp * 1024L / 1000L) and 0xFFFFL).toInt()
+            val prevTs = lastCadenceTimestamp[id]
+            if (prevTs != null && estTimestamp > prevTs && instantaneousCadence > 0) {
+                val elapsedSec = (estTimestamp - prevTs) / 1000.0
+                // revolutions added over the elapsed interval at the current RPM
+                val added = instantaneousCadence * elapsedSec / 60.0
+                val acc = (crankRevAccumulator[id] ?: 0.0) + added
+                crankRevAccumulator[id] = acc
+                device.cumulativeCrankRevolution = acc.toLong()
+                // Last Crank Event Time, unit 1/1024s, uint16 (wraps). Advance it by the same
+                // number of revolutions so RPM = deltaRev / deltaTime stays consistent.
+                device.lastCrankEventTime = ((acc * 1024.0).toLong() and 0xFFFFL).toInt()
+            }
+            lastCadenceTimestamp[id] = estTimestamp
+
             device.pwrTimestamp = estTimestamp
             listener.onDataUpdated(device)
         }
