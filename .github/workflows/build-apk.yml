@@ -1,0 +1,36 @@
+name: Build APK
+
+# Indul: minden push-ra a master ágon, ÉS kézzel a gombbal (Run workflow)
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kód letöltése
+        uses: actions/checkout@v4
+
+      - name: Java 17 beállítása
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle gyorsítótár
+        uses: actions/setup-gradle@v3
+
+      - name: gradlew futtathatóvá tétele
+        run: chmod +x ./gradlew
+
+      - name: Debug APK build
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: APK feltöltése (innen tudod letölteni)
+        uses: actions/upload-artifact@v4
+        with:
+          name: CSC_BLE_Bridge-powermeter-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
