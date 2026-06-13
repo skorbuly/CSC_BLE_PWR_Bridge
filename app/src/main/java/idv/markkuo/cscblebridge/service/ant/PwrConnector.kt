@@ -19,16 +19,29 @@ class PwrConnector(context: Context, listener: DeviceManagerListener<AntDevice.P
             listener.onDataUpdated(device)
         }
 
-        // Instantaneous cadence (RPM), if the power meter provides it.
+        // Instantaneous cadence (RPM) for display purposes.
         pcc.subscribeInstantaneousCadenceEvent { estTimestamp, _, _, instantaneousCadence ->
             val device = getDevice(pcc)
             device.instantaneousCadence = instantaneousCadence
             device.pwrTimestamp = estTimestamp
             listener.onDataUpdated(device)
         }
+
+        // Raw crank torque data carries the cumulative crank revolution count, which is what
+        // the BLE Cycling Power Measurement needs so that apps (TrainerRoad/Zwift) can derive
+        // cadence themselves. accumulatedCrankTicks = cumulative crank revolutions.
+        pcc.subscribeRawCrankTorqueDataEvent { estTimestamp, _, _, accumulatedCrankTicks, _, _ ->
+            val device = getDevice(pcc)
+            device.cumulativeCrankRevolution = accumulatedCrankTicks
+            // BLE "Last Crank Event Time" is in 1/1024s units (uint16, wraps around).
+            // Derive it from the ANT+ estimated timestamp (milliseconds).
+            device.lastCrankEventTime = ((estTimestamp * 1024L / 1000L) and 0xFFFFL).toInt()
+            device.pwrTimestamp = estTimestamp
+            listener.onDataUpdated(device)
+        }
     }
 
     override fun init(deviceNumber: Int, deviceName: String): AntDevice.PwrDevice {
-        return AntDevice.PwrDevice(deviceNumber, deviceName, 0, 0, 0L)
+        return AntDevice.PwrDevice(deviceNumber, deviceName, 0, 0, 0L, 0, 0L)
     }
 }
