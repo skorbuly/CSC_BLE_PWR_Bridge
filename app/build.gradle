@@ -17,8 +17,8 @@ android {
         applicationId "idv.markkuo.cscblebridge"
         minSdkVersion 21
         targetSdkVersion 33
-        versionCode 7
-        versionName "1.3.2-power"
+        versionCode 8
+        versionName "1.3.2-power2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
