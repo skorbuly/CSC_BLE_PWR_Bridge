@@ -55,5 +55,17 @@ sealed class AntDevice(val deviceId: Int, val deviceName: String, val typeName: 
         }
     }
 
+    data class PwrDevice(
+            private val id: Int,
+            private val name: String,
+            var instantaneousPower: Int,
+            var instantaneousCadence: Int,
+            var pwrTimestamp: Long
+    ) : AntDevice(id, name, "ANT+ Bike Power", BleServiceType.CpService) {
+        override fun getDataString(): String {
+            return "Power: $instantaneousPower W, Cadence: $instantaneousCadence"
+        }
+    }
+
     abstract fun getDataString(): String
 }
