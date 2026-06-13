@@ -12,7 +12,7 @@ import kotlin.experimental.or
  */
 sealed class BleServiceType(val serviceId: UUID, val measurement: UUID, val feature: UUID?) {
     companion object {
-        val serviceTypes = listOf(CscService, RscService, HrService)
+        val serviceTypes = listOf(CscService, RscService, HrService, CpService)
         var CLIENT_CONFIG: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     }
 
@@ -193,6 +193,48 @@ sealed class BleServiceType(val serviceId: UUID, val measurement: UUID, val feat
                 fraction = number - integralPart
             }
             return b.toByte()
+        }
+    }
+
+    object CpService: BleServiceType(
+            // Cycling Power service
+            UUID.fromString("00001818-0000-1000-8000-00805f9b34fb"),
+            // Cycling Power Measurement characteristic
+            UUID.fromString("00002a63-0000-1000-8000-00805f9b34fb"),
+            // Cycling Power Feature characteristic
+            UUID.fromString("00002a65-0000-1000-8000-00805f9b34fb")
+    ) {
+        override fun getSupportedFeatures(): ByteArray {
+            // CP Feature is a uint32. All zero = no optional features, only instantaneous power.
+            return ByteArray(4)
+        }
+
+        // https://www.bluetooth.com/specifications/specs/cycling-power-service/
+        override fun getBleData(antDevices: List<AntDevice>): ByteArray {
+            if (antDevices.size != 1) {
+                throw IllegalArgumentException("Only one power ANT+ device can be selected at a time, found ${antDevices.size}")
+            }
+            val antDevice = antDevices.first()
+            if (antDevice !is AntDevice.PwrDevice) {
+                throw IllegalArgumentException("Unable to get BLE Data for power device with $antDevice")
+            }
+
+            val data: MutableList<Byte> = ArrayList()
+            // Flags (uint16, little-endian): all zero = only Instantaneous Power present
+            data.add(0.toByte())
+            data.add(0.toByte())
+
+            // Instantaneous Power (sint16, watt, little-endian)
+            val power = antDevice.instantaneousPower
+            data.add(power.toByte())
+            data.add((power shr java.lang.Byte.SIZE).toByte())
+
+            // convert to primitive byte array
+            val byteArray = ByteArray(data.size)
+            for (i in data.indices) {
+                byteArray[i] = data[i]
+            }
+            return byteArray
         }
     }
 
