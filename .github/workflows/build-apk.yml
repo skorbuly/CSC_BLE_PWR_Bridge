@@ -19,9 +19,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Gradle gyorsítótár
-        uses: actions/setup-gradle@v3
-
       - name: gradlew futtathatóvá tétele
         run: chmod +x ./gradlew
 
