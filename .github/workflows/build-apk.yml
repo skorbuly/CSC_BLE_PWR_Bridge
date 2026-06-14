@@ -1,33 +1,65 @@
 name: Build APK
 
-# Indul: minden push-ra a master ágon, ÉS kézzel a gombbal (Run workflow)
+# Runs:
+#  - on every push to the master branch (as before)
+#  - manually via the "Run workflow" button
+#  - when you create a tag starting with "v", e.g. v1.3.2-power4 -> this also creates a RELEASE
 on:
   push:
     branches: [ master ]
+    tags: [ 'v*' ]
   workflow_dispatch:
+
+# Permission so the workflow can create a release
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Kód letöltése
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Java 17 beállítása
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: gradlew futtathatóvá tétele
+      - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Debug APK build
+      - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: APK feltöltése (innen tudod letölteni)
+      # Rename the built APK to a descriptive name (using the tag name when present)
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -n1)
+          NAME="CSC_BLE_Bridge_Power-${GITHUB_REF_NAME}.apk"
+          cp "$APK" "dist/${NAME}"
+          echo "Done: dist/${NAME}"
+
+      # Always upload as an artifact too (downloadable from Actions -> Artifacts)
+      - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: CSC_BLE_Bridge-powermeter-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: dist/*.apk
           if-no-files-found: error
+
+      # ONLY when you created a tag (v...): publish a Release to the Releases page
+      - name: Create release and upload APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            Build with added ANT+ Bike Power support.
+
+            This is a fork of starryalley/CSC_BLE_Bridge (original author: Mark Kuo, MIT License).
+            The APK below is a debug build that can be installed directly on Android.
+          files: dist/*.apk
