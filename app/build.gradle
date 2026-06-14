@@ -14,11 +14,11 @@ android {
     }
 
     defaultConfig {
-        applicationId "idv.markkuo.cscblebridge"
+        applicationId "idv.markkuo.cscblebridge.power"
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 10
-        versionName "1.3.2-power4"
+        versionName "1.3.2-power4-standalone"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
