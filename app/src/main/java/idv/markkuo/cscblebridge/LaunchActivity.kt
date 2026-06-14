@@ -6,7 +6,9 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.view.Menu
-import android.view.MenuItem
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import idv.markkuo.cscblebridge.service.MainService
 import idv.markkuo.cscblebridge.service.ant.AntDevice
@@ -25,27 +27,27 @@ class LaunchActivity: AppCompatActivity(), MainFragment.ServiceStarter, MainServ
         setContentView(R.layout.activity_launch)
     }
 
+    private var toggleActionView: View? = null
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        toggleActionView = menu.findItem(R.id.action_toggle_bridge).actionView
+        toggleActionView?.setOnClickListener {
+            if (isSearching()) stopService() else startService()
+            updateToggleView()
+        }
+        updateToggleView()
         return true
     }
 
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        // Reflect the current state on the action bar toggle.
-        val item = menu.findItem(R.id.action_toggle_bridge)
+    /** Updates the action-bar toggle's icon and label to match the current state. */
+    private fun updateToggleView() {
+        val view = toggleActionView ?: return
         val searching = isSearching()
-        item.setIcon(if (searching) R.drawable.ic_stop_red else R.drawable.ic_play_green)
-        item.setTitle(if (searching) R.string.stop_service else R.string.start_service)
-        return super.onPrepareOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_toggle_bridge) {
-            if (isSearching()) stopService() else startService()
-            invalidateOptionsMenu()
-            return true
-        }
-        return super.onOptionsItemSelected(item)
+        view.findViewById<ImageView>(R.id.toggle_icon)
+                .setImageResource(if (searching) R.drawable.ic_stop_red else R.drawable.ic_play_green)
+        view.findViewById<TextView>(R.id.toggle_label)
+                .setText(if (searching) R.string.stop_service else R.string.start_service)
     }
 
     override fun onResume() {
@@ -63,7 +65,7 @@ class LaunchActivity: AppCompatActivity(), MainFragment.ServiceStarter, MainServ
             val binder = service as MainService.LocalBinder
             mService = binder.service
             binder.service.addListener(this@LaunchActivity)
-            invalidateOptionsMenu()
+            updateToggleView()
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
@@ -102,7 +104,7 @@ class LaunchActivity: AppCompatActivity(), MainFragment.ServiceStarter, MainServ
 
     override fun isSearching(): Boolean = mService?.isSearching ?: false
     override fun searching(isSearching: Boolean) {
-        runOnUiThread { invalidateOptionsMenu() }
+        runOnUiThread { updateToggleView() }
     }
 
     override fun onDevicesUpdated(devices: List<AntDevice>, selectedDevices: Map<BleServiceType, List<Int>>) {

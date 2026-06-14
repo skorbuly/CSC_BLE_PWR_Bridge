@@ -6,7 +6,7 @@
          in onPrepareOptionsMenu based on the current searching state. -->
     <item
         android:id="@+id/action_toggle_bridge"
-        android:icon="@drawable/ic_play_green"
         android:title="@string/start_service"
+        app:actionLayout="@layout/action_toggle"
         app:showAsAction="always" />
 </menu>
