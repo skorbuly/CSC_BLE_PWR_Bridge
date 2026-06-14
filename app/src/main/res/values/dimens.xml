@@ -6,7 +6,7 @@
     <dimen name="card_margin">6dp</dimen>
     <dimen name="text_device_name">18sp</dimen>
     <dimen name="text_device_type">13sp</dimen>
-    <dimen name="text_device_data">16sp</dimen>
+    <dimen name="text_device_data">24sp</dimen>
     <dimen name="text_device_detail">13sp</dimen>
     <!-- Minimum card width used to compute the responsive grid column count. -->
     <dimen name="card_min_width">320dp</dimen>
