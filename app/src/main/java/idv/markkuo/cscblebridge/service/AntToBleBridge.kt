@@ -15,8 +15,13 @@ import java.util.ArrayList
 
 class AntToBleBridge {
 
+    companion object {
+        private const val PREFS = "antcast_prefs"
+    }
+
     private val antConnectors = ArrayList<AntDeviceConnector<*, *>>()
     private var bleServer: BleServer? = null
+    private var appContext: Context? = null
 
     val antDevices = hashMapOf<Int, AntDevice>()
     val selectedDevices = hashMapOf<BleServiceType, ArrayList<Int>>()
@@ -26,6 +31,7 @@ class AntToBleBridge {
 
     @Synchronized
     fun startup(service: Context, callback: () -> Unit) {
+        appContext = service.applicationContext
         serviceCallback = callback
         stop()
         isSearching = true
@@ -158,20 +164,18 @@ class AntToBleBridge {
             connector.startSearch()
         }
 
-        // First selectedDevice selection
-        if (!selectedDevices.containsKey(type)) {
-            selectedDevices[type] = arrayListOf(data.deviceId)
-            selectedDevicesUpdated()
-        } else {
-            if (type == BleServiceType.CscService) {
-                // Bsc and Ble devices supported
-                selectedDevices[type]?.let { devices ->
-                    val existingDevice = selectedDevices[type]?.firstOrNull { antDevices[it]?.typeName == data.typeName }
-                    if (existingDevice == null) {
-                        devices.add(data.deviceId)
-                        selectedDevicesUpdated()
-                    }
-                }
+        // Auto-select for broadcast. If a device of this exact sensor type is not yet
+        // selected, pick the remembered ("preferred") device when it shows up; if there
+        // is no saved preference, pick the first one seen. When a preference exists for a
+        // different device, wait for it instead of auto-switching to whatever is available
+        // — so the bridge never silently jumps to another sensor just because the
+        // previously broadcast one is momentarily offline.
+        val alreadySelected = selectedDevices[type]?.any { antDevices[it]?.typeName == data.typeName } ?: false
+        if (!alreadySelected) {
+            val preferred = getPreferredDevice(data.typeName)
+            if (preferred == null || preferred == data.deviceId) {
+                selectedDevices.getOrPut(type) { arrayListOf() }.add(data.deviceId)
+                selectedDevicesUpdated()
             }
         }
         serviceCallback()
@@ -185,6 +189,9 @@ class AntToBleBridge {
             arrayList.remove(existingDevice)
         }
         arrayList.add(data.deviceId)
+        selectedDevices[data.bleType] = arrayList
+        // Remember this manual choice so it is restored (and not auto-overridden) later.
+        setPreferredDevice(data.typeName, data.deviceId)
         selectedDevicesUpdated()
         serviceCallback?.invoke()
     }
@@ -192,6 +199,21 @@ class AntToBleBridge {
     private fun selectedDevicesUpdated() {
         bleServer?.selectedDevices = selectedDevices
     }
+
+    // Persisted per-sensor-type broadcast preference (keyed by typeName so speed and
+    // cadence are tracked separately). Survives service/process restarts.
+    private fun getPreferredDevice(typeName: String): Int? {
+        val id = appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                ?.getInt(prefKey(typeName), -1) ?: -1
+        return if (id >= 0) id else null
+    }
+
+    private fun setPreferredDevice(typeName: String, deviceId: Int) {
+        appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                ?.edit()?.putInt(prefKey(typeName), deviceId)?.apply()
+    }
+
+    private fun prefKey(typeName: String) = "preferred_" + typeName.replace(' ', '_')
 
     fun stop() {
         isSearching = false
