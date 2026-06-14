@@ -11,4 +11,7 @@
     <color name="textSecondary">#5F6368</color>
     <color name="textAccent">#3700B3</color>
     <color name="connected">#2E7D32</color>
+
+    <!-- Launcher adaptive-icon background -->
+    <color name="ic_launcher_background">#6200EE</color>
 </resources>

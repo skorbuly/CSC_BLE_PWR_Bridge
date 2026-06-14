@@ -29,7 +29,7 @@
         </activity>
         <service android:name="idv.markkuo.cscblebridge.service.MainService"
             android:stopWithTask="false"
-            android:label="Ant to BLE Bridge"/>
+            android:label="AntCast"/>
     </application>
 
 </manifest>

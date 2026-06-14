@@ -34,7 +34,7 @@ class LaunchActivity: AppCompatActivity(), MainFragment.ServiceStarter, MainServ
         // Reflect the current state on the action bar toggle.
         val item = menu.findItem(R.id.action_toggle_bridge)
         val searching = isSearching()
-        item.setIcon(if (searching) R.drawable.ic_baseline_stop_24 else R.drawable.ic_baseline_play_arrow_24)
+        item.setIcon(if (searching) R.drawable.ic_stop_red else R.drawable.ic_play_green)
         item.setTitle(if (searching) R.string.stop_service else R.string.start_service)
         return super.onPrepareOptionsMenu(menu)
     }
