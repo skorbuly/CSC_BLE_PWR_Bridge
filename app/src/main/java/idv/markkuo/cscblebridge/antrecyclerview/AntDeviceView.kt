@@ -2,6 +2,7 @@ package idv.markkuo.cscblebridge.antrecyclerview
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -17,6 +18,7 @@ class AntDeviceView @JvmOverloads constructor(
     private val nameView: TextView
     private val typeView: TextView
     private val dataView: TextView
+    private val detailsView: TextView
     private val background: LinearLayout
     private val broadcastButtonView: BroadcastButtonView
 
@@ -26,6 +28,7 @@ class AntDeviceView @JvmOverloads constructor(
         nameView = findViewById(R.id.ant_device_name)
         typeView = findViewById(R.id.ant_device_type)
         dataView = findViewById(R.id.ant_device_data)
+        detailsView = findViewById(R.id.ant_device_details)
         background = findViewById(R.id.ant_device_background)
         broadcastButtonView = findViewById(R.id.broadcast_button_view)
     }
@@ -33,17 +36,68 @@ class AntDeviceView @JvmOverloads constructor(
     fun bind(antDevice: AntDevice, isSelected: Boolean, onClickListener: (antDevice: AntDevice) -> Unit) {
         val color = if (isSelected) {
             broadcastButtonView.setState(BroadcastButtonView.BroadcastButtonViewState.Broadcasting)
-            context.resources.getColor(android.R.color.holo_blue_dark)
+            context.resources.getColor(R.color.textAccent)
         } else {
             broadcastButtonView.setState(BroadcastButtonView.BroadcastButtonViewState.NotSelected)
-            context.resources.getColor(android.R.color.black)
+            context.resources.getColor(R.color.textPrimary)
         }
 
         nameView.text = antDevice.deviceName
         nameView.setTextColor(color)
-        typeView.text = antDevice.typeName
+
+        // Type, with the connection state appended when known: "ANT+ Bike Power · Connected"
+        typeView.text = antDevice.connectionState?.let { "${antDevice.typeName} · $it" } ?: antDevice.typeName
+
         dataView.text = antDevice.getDataString()
+
+        val details = buildDetails(antDevice)
+        if (details.isEmpty()) {
+            detailsView.visibility = View.GONE
+        } else {
+            detailsView.visibility = View.VISIBLE
+            detailsView.text = details
+        }
+
         background.setOnClickListener { onClickListener(antDevice) }
         broadcastButtonView.setClickListener { onClickListener(antDevice) }
+    }
+
+    /** Builds the multi-line detail block, skipping any field the sensor did not report. */
+    private fun buildDetails(d: AntDevice): String {
+        val lines = ArrayList<String>()
+        fun add(labelRes: Int, value: String?) {
+            if (!value.isNullOrEmpty()) lines.add("${context.getString(labelRes)}: $value")
+        }
+
+        add(R.string.label_manufacturer, d.manufacturerName)
+        if (d.modelNumber > 0) add(R.string.label_model, "#${d.modelNumber}")
+        if (d.softwareRevision > 0) add(R.string.label_firmware, "v${d.softwareRevision}")
+        if (d.hardwareRevision > 0) add(R.string.label_hardware, "v${d.hardwareRevision}")
+        add(R.string.label_device_id, d.deviceId.toString())
+        if (d.serialNumber > 0) add(R.string.label_serial, d.serialNumber.toString())
+
+        val battery = batteryText(d)
+        add(R.string.label_battery, battery)
+        d.rssi?.let { add(R.string.label_signal, "$it dBm") }
+
+        if (d is AntDevice.PwrDevice) {
+            val left = d.pedalBalanceLeft
+            val right = d.pedalBalanceRight
+            if (left != null && right != null) {
+                add(R.string.label_balance, "$left% / $right%")
+            }
+        }
+
+        return lines.joinToString("\n")
+    }
+
+    private fun batteryText(d: AntDevice): String? {
+        val status = d.batteryStatus ?: return null
+        val voltage = d.batteryVoltage
+        return if (voltage != null) {
+            String.format("%s (%.2fV)", status, voltage)
+        } else {
+            status
+        }
     }
 }

@@ -18,4 +18,15 @@
     <string name="example_80_bpm">80 bpm</string>
     <string name="example_ant_hr">Ant+ Heart Rate</string>
     <string name="example_device_id">1234</string>
+
+    <!-- Device detail labels -->
+    <string name="label_manufacturer">Manufacturer</string>
+    <string name="label_model">Model</string>
+    <string name="label_firmware">Firmware</string>
+    <string name="label_hardware">Hardware</string>
+    <string name="label_device_id">Device ID</string>
+    <string name="label_serial">Serial</string>
+    <string name="label_battery">Battery</string>
+    <string name="label_signal">Signal</string>
+    <string name="label_balance">L/R Balance</string>
 </resources>

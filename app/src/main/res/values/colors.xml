@@ -3,4 +3,12 @@
     <color name="colorPrimary">#6200EE</color>
     <color name="colorPrimaryDark">#3700B3</color>
     <color name="colorAccent">#03DAC5</color>
+
+    <!-- Light theme surfaces: a soft grey screen background so the white cards stand out. -->
+    <color name="screenBackground">#ECEFF1</color>
+    <color name="cardBackground">#FFFFFF</color>
+    <color name="textPrimary">#1C1B1F</color>
+    <color name="textSecondary">#5F6368</color>
+    <color name="textAccent">#3700B3</color>
+    <color name="connected">#2E7D32</color>
 </resources>

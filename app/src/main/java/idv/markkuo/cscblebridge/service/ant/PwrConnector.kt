@@ -70,6 +70,22 @@ class PwrConnector(context: Context, listener: DeviceManagerListener<AntDevice.P
             device.pwrTimestamp = estTimestamp
             listener.onDataUpdated(device)
         }
+
+        // Optional left/right pedal power balance, reported by dual-sided meters.
+        pcc.subscribePedalPowerBalanceEvent { _, _, rightPedalIndicator, pedalPowerPercentage ->
+            val device = getDevice(pcc)
+            if (rightPedalIndicator) {
+                device.pedalBalanceRight = pedalPowerPercentage
+                device.pedalBalanceLeft = 100 - pedalPowerPercentage
+            } else {
+                device.pedalBalanceLeft = pedalPowerPercentage
+                device.pedalBalanceRight = 100 - pedalPowerPercentage
+            }
+            listener.onDataUpdated(device)
+        }
+
+        // Common pages: manufacturer/model/firmware, serial, battery, RSSI.
+        subscribeCommonPages(pcc, getDevice(pcc))
     }
 
     override fun init(deviceNumber: Int, deviceName: String): AntDevice.PwrDevice {

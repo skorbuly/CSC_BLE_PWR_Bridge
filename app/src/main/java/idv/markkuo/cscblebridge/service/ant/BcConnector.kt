@@ -27,6 +27,9 @@ class BcConnector(context: Context, listener: DeviceManagerListener<AntDevice.Bc
         }
 
 
+        // Legacy common pages: manufacturer/serial, version/model, RSSI.
+        subscribeLegacyCommonPages(pcc, getDevice(pcc))
+
         if (pcc.isSpeedAndCadenceCombinedSensor && !isCombinedSensor) {
             listener.onCombinedSensor(this, pcc.antDeviceNumber)
         }

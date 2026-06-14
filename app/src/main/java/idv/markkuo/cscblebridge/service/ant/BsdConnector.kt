@@ -47,6 +47,9 @@ class BsdConnector(context: Context, listener: DeviceManagerListener<AntDevice.B
             listener.onDataUpdated(device)
         }
 
+        // Legacy common pages: manufacturer/serial, version/model, RSSI.
+        subscribeLegacyCommonPages(pcc, getDevice(pcc))
+
         if (pcc.isSpeedAndCadenceCombinedSensor && !isCombinedSensor) {
             listener.onCombinedSensor(this, pcc.antDeviceNumber)
         }

@@ -17,6 +17,9 @@ class HRConnector(context: Context, listener: DeviceManagerListener<AntDevice.HR
             device.hrTimestamp = estTimestamp
             listener.onDataUpdated(device)
         }
+
+        // Heart rate uses the legacy common profile: manufacturer/serial, version/model, RSSI.
+        subscribeLegacyCommonPages(pcc, getDevice(pcc))
     }
 
     override fun init(deviceNumber: Int, deviceName: String): AntDevice.HRDevice {

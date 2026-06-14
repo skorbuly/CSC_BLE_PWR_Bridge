@@ -90,6 +90,9 @@ class SSConnector(context: Context, listener: DeviceManagerListener<AntDevice.SS
             device.ssSpeedTimestamp = estTimestamp
             listener.onDataUpdated(device)
         }
+
+        // Common pages: manufacturer/model/firmware, serial, battery, RSSI.
+        subscribeCommonPages(pcc, getDevice(pcc))
     }
 
     override fun init(deviceNumber: Int, deviceName: String): AntDevice.SSDevice {
