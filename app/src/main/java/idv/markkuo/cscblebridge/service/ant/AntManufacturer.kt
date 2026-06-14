@@ -10,6 +10,7 @@ package idv.markkuo.cscblebridge.service.ant
  * below when a new manufacturer ID shows up in the wild.
  */
 object AntManufacturer {
+    // Verified against the FIT SDK manufacturer field type (via python-fitparse profile).
     private val names = mapOf(
             1 to "Garmin",
             6 to "SRM",
@@ -19,13 +20,14 @@ object AntManufacturer {
             15 to "Dynastream",
             16 to "Timex",
             23 to "Suunto",
-            29 to "Peaksware",
+            28 to "Peaksware",
+            29 to "Saxonar (power2max)",
             32 to "Wahoo Fitness",
             40 to "Concept2",
-            63 to "Hammerhead",
-            64 to "Kinetic by Kurt",
-            65 to "Shimano",
-            68 to "ThinkRider",
+            63 to "Specialized",
+            64 to "WTEK",
+            65 to "Physical Enterprises",
+            68 to "CatEye",
             69 to "Stages Cycling",
             76 to "Moxy",
             89 to "Tacx",
