@@ -1,3 +1,22 @@
+> ## ⚡ Fork notice — ANT+ Bike Power support
+>
+> This is a fork of **[starryalley/CSC_BLE_Bridge](https://github.com/starryalley/CSC_BLE_Bridge)**
+> by **Mark Kuo**, distributed under the original MIT License (see [`LICENSE`](LICENSE)).
+> All credit for the original application goes to the upstream author and contributors.
+>
+> **What this fork adds:** support for **ANT+ Bike Power meters**. The app now also reads an
+> ANT+ cycling power meter and re-broadcasts it as a standard **BLE Cycling Power Service
+> (0x1818)**, exposing instantaneous power (watts) and crank or spider-based cadence. This lets apps
+> such as TrainerRoad, TrainerDay or Zwift treat an ANT+ power meter as a BLE power source —
+> useful for PowerMatch-style setups where the power meter drives a smart trainer's ERG control.
+>
+> Cadence is synthesized from the power meter's instantaneous cadence into the BLE crank
+> revolution / event-time fields, so cadence-aware apps receive a correct RPM value.
+>
+> _This added functionality is provided as-is, with no affiliation with or endorsement by the
+> original author._
+
+---
 
 # What
 
