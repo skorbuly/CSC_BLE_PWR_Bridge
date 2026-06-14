@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
+import android.view.Menu
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import idv.markkuo.cscblebridge.service.MainService
 import idv.markkuo.cscblebridge.service.ant.AntDevice
@@ -23,6 +25,29 @@ class LaunchActivity: AppCompatActivity(), MainFragment.ServiceStarter, MainServ
         setContentView(R.layout.activity_launch)
     }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        // Reflect the current state on the action bar toggle.
+        val item = menu.findItem(R.id.action_toggle_bridge)
+        val searching = isSearching()
+        item.setIcon(if (searching) R.drawable.ic_baseline_stop_24 else R.drawable.ic_baseline_play_arrow_24)
+        item.setTitle(if (searching) R.string.stop_service else R.string.start_service)
+        return super.onPrepareOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_toggle_bridge) {
+            if (isSearching()) stopService() else startService()
+            invalidateOptionsMenu()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     override fun onResume() {
         super.onResume()
         startService()
@@ -38,8 +63,7 @@ class LaunchActivity: AppCompatActivity(), MainFragment.ServiceStarter, MainServ
             val binder = service as MainService.LocalBinder
             mService = binder.service
             binder.service.addListener(this@LaunchActivity)
-            val mainFragment = mainFragment()
-            mainFragment?.searching(binder.service.isSearching)
+            invalidateOptionsMenu()
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
@@ -78,7 +102,7 @@ class LaunchActivity: AppCompatActivity(), MainFragment.ServiceStarter, MainServ
 
     override fun isSearching(): Boolean = mService?.isSearching ?: false
     override fun searching(isSearching: Boolean) {
-        mainFragment()?.searching(isSearching)
+        runOnUiThread { invalidateOptionsMenu() }
     }
 
     override fun onDevicesUpdated(devices: List<AntDevice>, selectedDevices: Map<BleServiceType, List<Int>>) {

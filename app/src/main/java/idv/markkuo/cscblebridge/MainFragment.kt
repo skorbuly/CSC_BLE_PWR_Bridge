@@ -7,7 +7,6 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
@@ -26,7 +25,6 @@ class MainFragment: Fragment() {
     }
 
     private var antDeviceRecyclerViewAdapter: AntDeviceRecyclerViewAdapter? = null
-    private lateinit var searchButton: Button
     private lateinit var broadcastSummaryValue: TextView
 
     // ANT+ data arrives many times per second; coalesce UI refreshes so the main
@@ -50,18 +48,6 @@ class MainFragment: Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         super.onCreateView(inflater, container, savedInstanceState)
         val view = inflater.inflate(R.layout.fragment_main, container)
-
-        searchButton = view.findViewById(R.id.searchButton)
-        searchButton.setOnClickListener {
-            val searching = (requireActivity() as ServiceStarter).isSearching()
-            if (searching) {
-                (activity as ServiceStarter).stopService()
-            } else {
-                (activity as ServiceStarter).startService()
-            }
-            updateSearchButtonText(!searching)
-        }
-        updateSearchButtonText((requireActivity() as ServiceStarter).isSearching())
 
         broadcastSummaryValue = view.findViewById(R.id.broadcast_summary_value)
 
@@ -99,10 +85,6 @@ class MainFragment: Fragment() {
         return maxOf(1, (screenWidthDp / cardMinWidthDp).toInt())
     }
 
-    private fun updateSearchButtonText(searching: Boolean) {
-        searchButton.text = if (searching) getString(R.string.stop_service) else getString(R.string.start_service)
-    }
-
     fun setDevices(devices: List<AntDevice>, selectedDevices: Map<BleServiceType, List<Int>>) {
         // Keep only the latest snapshot and apply it at most once per UI_THROTTLE_MS.
         pendingDevices = devices
@@ -124,9 +106,5 @@ class MainFragment: Fragment() {
                 "$name ${device.deviceId}"
             }
         }
-    }
-
-    fun searching(isSearching: Boolean) {
-        updateSearchButtonText(isSearching)
     }
 }
