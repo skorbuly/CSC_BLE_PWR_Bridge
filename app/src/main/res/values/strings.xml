@@ -16,6 +16,7 @@
     <string name="bluetooth_connected">Bluetooth connected</string>
     <string name="broadcast">Broadcast this</string>
     <string name="broadcasting">LIVE</string>
+    <string name="switching">Switching…</string>
     <string name="section_broadcasting">BROADCASTING</string>
     <string name="section_available">AVAILABLE</string>
     <string name="summary_broadcasting">Broadcasting to BLE</string>

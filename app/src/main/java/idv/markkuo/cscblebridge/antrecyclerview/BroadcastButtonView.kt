@@ -14,7 +14,8 @@ class BroadcastButtonView @JvmOverloads constructor(
 
     enum class BroadcastButtonViewState {
         NotSelected,
-        Broadcasting
+        Broadcasting,
+        Switching
     }
 
     private val broadcastButtonBroadcast: Button
@@ -36,11 +37,21 @@ class BroadcastButtonView @JvmOverloads constructor(
         when (state) {
             BroadcastButtonViewState.NotSelected -> {
                 broadcastButtonBroadcast.visibility = View.VISIBLE
+                broadcastButtonBroadcast.isEnabled = true
+                broadcastButtonBroadcast.setText(R.string.broadcast)
                 broadcastingIndicator.visibility = View.GONE
             }
             BroadcastButtonViewState.Broadcasting -> {
                 broadcastButtonBroadcast.visibility = View.GONE
                 broadcastingIndicator.visibility = View.VISIBLE
+            }
+            BroadcastButtonViewState.Switching -> {
+                // Optimistic feedback shown the instant the button is tapped, until
+                // the broadcast selection actually changes.
+                broadcastButtonBroadcast.visibility = View.VISIBLE
+                broadcastButtonBroadcast.isEnabled = false
+                broadcastButtonBroadcast.setText(R.string.switching)
+                broadcastingIndicator.visibility = View.GONE
             }
         }
     }

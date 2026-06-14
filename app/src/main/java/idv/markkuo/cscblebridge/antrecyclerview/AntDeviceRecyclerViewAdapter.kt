@@ -24,10 +24,29 @@ class AntDeviceRecyclerViewAdapter(private val deviceSelected: (device: AntDevic
 
     private val rows = ArrayList<Row>()
 
+    // Device the user just tapped, shown as "Switching…" until the selection
+    // actually flips to it (optimistic feedback, independent of backend timing).
+    private var switchingDeviceId: Int? = null
+
+    // Wraps the external callback so a tap immediately shows feedback before the
+    // (throttled) backend update comes back.
+    private val onDeviceTapped: (AntDevice) -> Unit = { device ->
+        switchingDeviceId = device.deviceId
+        notifyDataSetChanged()
+        deviceSelected(device)
+    }
+
     fun updateDevices(devices: List<AntDevice>, selectedDevices: Map<BleServiceType, List<Int>>) {
         val broadcastIds = selectedDevices.values.flatten().toHashSet()
         val broadcasting = devices.filter { broadcastIds.contains(it.deviceId) }
         val available = devices.filter { !broadcastIds.contains(it.deviceId) }
+
+        // The switch completed (or the device vanished): clear the pending feedback.
+        switchingDeviceId?.let { id ->
+            if (broadcastIds.contains(id) || devices.none { it.deviceId == id }) {
+                switchingDeviceId = null
+            }
+        }
 
         rows.clear()
         if (broadcasting.isNotEmpty()) {
@@ -62,7 +81,10 @@ class AntDeviceRecyclerViewAdapter(private val deviceSelected: (device: AntDevic
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val row = rows[position]) {
             is Row.Header -> (holder as HeaderViewHolder).title.setText(row.titleRes)
-            is Row.Device -> (holder as AntDeviceViewHolder).view.bind(row.device, row.isBroadcasting, deviceSelected)
+            is Row.Device -> {
+                val isSwitching = !row.isBroadcasting && row.device.deviceId == switchingDeviceId
+                (holder as AntDeviceViewHolder).view.bind(row.device, row.isBroadcasting, isSwitching, onDeviceTapped)
+            }
         }
     }
 

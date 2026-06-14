@@ -2,6 +2,8 @@ package idv.markkuo.cscblebridge
 
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +28,24 @@ class MainFragment: Fragment() {
     private var antDeviceRecyclerViewAdapter: AntDeviceRecyclerViewAdapter? = null
     private lateinit var searchButton: Button
     private lateinit var broadcastSummaryValue: TextView
+
+    // ANT+ data arrives many times per second; coalesce UI refreshes so the main
+    // thread stays responsive to taps (see UI_THROTTLE_MS).
+    private val uiHandler = Handler(Looper.getMainLooper())
+    @Volatile private var pendingDevices: List<AntDevice>? = null
+    @Volatile private var pendingSelected: Map<BleServiceType, List<Int>>? = null
+    @Volatile private var updateScheduled = false
+    private val applyUpdate = Runnable {
+        updateScheduled = false
+        val devices = pendingDevices ?: return@Runnable
+        val selected = pendingSelected ?: return@Runnable
+        antDeviceRecyclerViewAdapter?.updateDevices(devices, selected)
+        updateBroadcastSummary(devices, selected)
+    }
+
+    companion object {
+        private const val UI_THROTTLE_MS = 300L
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         super.onCreateView(inflater, container, savedInstanceState)
@@ -64,6 +84,13 @@ class MainFragment: Fragment() {
         return view
     }
 
+    override fun onDestroyView() {
+        // Drop any pending throttled refresh so it can't run against a torn-down view.
+        uiHandler.removeCallbacks(applyUpdate)
+        updateScheduled = false
+        super.onDestroyView()
+    }
+
     /** Derives the grid column count from the available screen width and a minimum card width. */
     private fun calculateSpanCount(context: Context): Int {
         val metrics = context.resources.displayMetrics
@@ -77,9 +104,12 @@ class MainFragment: Fragment() {
     }
 
     fun setDevices(devices: List<AntDevice>, selectedDevices: Map<BleServiceType, List<Int>>) {
-        activity?.runOnUiThread {
-            antDeviceRecyclerViewAdapter?.updateDevices(devices, selectedDevices)
-            updateBroadcastSummary(devices, selectedDevices)
+        // Keep only the latest snapshot and apply it at most once per UI_THROTTLE_MS.
+        pendingDevices = devices
+        pendingSelected = selectedDevices
+        if (!updateScheduled) {
+            updateScheduled = true
+            uiHandler.postDelayed(applyUpdate, UI_THROTTLE_MS)
         }
     }
 

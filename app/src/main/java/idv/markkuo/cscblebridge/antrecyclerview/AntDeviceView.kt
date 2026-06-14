@@ -33,12 +33,14 @@ class AntDeviceView @JvmOverloads constructor(
         broadcastButtonView = findViewById(R.id.broadcast_button_view)
     }
 
-    fun bind(antDevice: AntDevice, isSelected: Boolean, onClickListener: (antDevice: AntDevice) -> Unit) {
+    fun bind(antDevice: AntDevice, isSelected: Boolean, isSwitching: Boolean, onClickListener: (antDevice: AntDevice) -> Unit) {
         val color = if (isSelected) {
             broadcastButtonView.setState(BroadcastButtonView.BroadcastButtonViewState.Broadcasting)
             context.resources.getColor(R.color.textAccent)
         } else {
-            broadcastButtonView.setState(BroadcastButtonView.BroadcastButtonViewState.NotSelected)
+            broadcastButtonView.setState(
+                    if (isSwitching) BroadcastButtonView.BroadcastButtonViewState.Switching
+                    else BroadcastButtonView.BroadcastButtonViewState.NotSelected)
             context.resources.getColor(R.color.textPrimary)
         }
 
