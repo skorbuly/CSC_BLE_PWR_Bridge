@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
 
     <Button
         android:id="@+id/broadcast_button_broadcast"
@@ -15,11 +16,35 @@
         android:textColor="@android:color/white"
         style="@style/Widget.AppCompat.Button"/>
 
-    <ImageView
-        android:id="@+id/bluetooth"
+    <!-- Shown instead of the button when this device is the one being broadcast -->
+    <LinearLayout
+        android:id="@+id/broadcasting_indicator"
         android:layout_width="wrap_content"
-        android:visibility="gone"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_baseline_bluetooth_24"
-        android:contentDescription="@string/bluetooth_connected" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        android:background="@color/connected"
+        android:paddingStart="8dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp">
+
+        <ImageView
+            android:id="@+id/bluetooth"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_baseline_bluetooth_24"
+            app:tint="@android:color/white"
+            android:contentDescription="@string/bluetooth_connected" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="@string/broadcasting"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="12sp" />
+    </LinearLayout>
 </FrameLayout>

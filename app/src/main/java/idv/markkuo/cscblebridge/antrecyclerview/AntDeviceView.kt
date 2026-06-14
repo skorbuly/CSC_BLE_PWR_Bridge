@@ -71,8 +71,9 @@ class AntDeviceView @JvmOverloads constructor(
 
         add(R.string.label_manufacturer, d.manufacturerName)
         if (d.modelNumber > 0) add(R.string.label_model, "#${d.modelNumber}")
-        if (d.softwareRevision > 0) add(R.string.label_firmware, "v${d.softwareRevision}")
-        if (d.hardwareRevision > 0) add(R.string.label_hardware, "v${d.hardwareRevision}")
+        // 255 (0xFF) is the "not reported" sentinel for the revision byte.
+        if (d.softwareRevision in 1..254) add(R.string.label_firmware, "v${d.softwareRevision}")
+        if (d.hardwareRevision in 1..254) add(R.string.label_hardware, "v${d.hardwareRevision}")
         add(R.string.label_device_id, d.deviceId.toString())
         if (d.serialNumber > 0) add(R.string.label_serial, d.serialNumber.toString())
 

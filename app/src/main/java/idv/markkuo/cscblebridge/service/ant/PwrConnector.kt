@@ -72,16 +72,20 @@ class PwrConnector(context: Context, listener: DeviceManagerListener<AntDevice.P
         }
 
         // Optional left/right pedal power balance, reported by dual-sided meters.
+        // Single-sided meters / trainers send an out-of-range sentinel (e.g. 0xFF)
+        // instead of a real percentage; only accept a valid 0..100 value.
         pcc.subscribePedalPowerBalanceEvent { _, _, rightPedalIndicator, pedalPowerPercentage ->
-            val device = getDevice(pcc)
-            if (rightPedalIndicator) {
-                device.pedalBalanceRight = pedalPowerPercentage
-                device.pedalBalanceLeft = 100 - pedalPowerPercentage
-            } else {
-                device.pedalBalanceLeft = pedalPowerPercentage
-                device.pedalBalanceRight = 100 - pedalPowerPercentage
+            if (pedalPowerPercentage in 0..100) {
+                val device = getDevice(pcc)
+                if (rightPedalIndicator) {
+                    device.pedalBalanceRight = pedalPowerPercentage
+                    device.pedalBalanceLeft = 100 - pedalPowerPercentage
+                } else {
+                    device.pedalBalanceLeft = pedalPowerPercentage
+                    device.pedalBalanceRight = 100 - pedalPowerPercentage
+                }
+                listener.onDataUpdated(device)
             }
-            listener.onDataUpdated(device)
         }
 
         // Common pages: manufacturer/model/firmware, serial, battery, RSSI.

@@ -5,7 +5,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.ImageView
+import android.widget.LinearLayout
 import idv.markkuo.cscblebridge.R
 
 class BroadcastButtonView @JvmOverloads constructor(
@@ -18,12 +18,12 @@ class BroadcastButtonView @JvmOverloads constructor(
     }
 
     private val broadcastButtonBroadcast: Button
-    private val bluetoothIcon: ImageView
+    private val broadcastingIndicator: LinearLayout
 
     init {
         inflate(context, R.layout.broadcast_view, this)
         broadcastButtonBroadcast = findViewById(R.id.broadcast_button_broadcast)
-        bluetoothIcon = findViewById(R.id.bluetooth)
+        broadcastingIndicator = findViewById(R.id.broadcasting_indicator)
     }
 
     fun setClickListener(clickListener: () -> Unit) {
@@ -36,11 +36,11 @@ class BroadcastButtonView @JvmOverloads constructor(
         when (state) {
             BroadcastButtonViewState.NotSelected -> {
                 broadcastButtonBroadcast.visibility = View.VISIBLE
-                bluetoothIcon.visibility = View.GONE
+                broadcastingIndicator.visibility = View.GONE
             }
             BroadcastButtonViewState.Broadcasting -> {
                 broadcastButtonBroadcast.visibility = View.GONE
-                bluetoothIcon.visibility = View.VISIBLE
+                broadcastingIndicator.visibility = View.VISIBLE
             }
         }
     }

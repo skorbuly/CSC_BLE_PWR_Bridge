@@ -23,7 +23,16 @@ class BleServer {
     companion object {
         private const val TAG = "BleServer"
         private const val UPDATE_INTERVAL_MS = 1000L
+        private const val PREFS = "ble_bridge_prefs"
+        private const val KEY_ORIGINAL_NAME = "original_bt_name"
+        // BLE local name length is limited; keep the advertised name reasonably short.
+        private const val MAX_NAME_LENGTH = 26
     }
+
+    // The advertised BLE name is the device's global Bluetooth name. We override it
+    // with the broadcast ANT+ device (manufacturer + id) so receivers can tell two
+    // bridges apart, and restore the original name when the server stops.
+    private var pendingReAdvertise = false
     private var bluetoothManager: BluetoothManager? = null
     private var context: Context? = null
     private var server: BluetoothGattServer? = null
@@ -43,6 +52,9 @@ class BleServer {
         if (!checkBluetoothSupport(bluetoothAdapter, context.packageManager)) {
             throw UnsupportedOperationException("Bluetooth LE isn't supported")
         }
+
+        // Remember the original Bluetooth name once, so we can restore it later.
+        saveOriginalNameIfNeeded(context, bluetoothAdapter)
 
         // Register for system Bluetooth events
         val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
@@ -101,6 +113,8 @@ class BleServer {
     }
 
     fun notifyRegisteredDevices() {
+        // Keep the advertised BLE name in sync with whatever is being broadcast.
+        updateAdvertisedName()
         Log.i(TAG, "Notifying ${registeredDevices.size} registered devices")
         registeredDevices.forEach { device ->
             BleServiceType.serviceTypes.forEach { bleService ->
@@ -130,6 +144,8 @@ class BleServer {
     }
 
     fun stopServer() {
+        // Restore the original Bluetooth name before we lose the context.
+        restoreOriginalName()
         this.context?.unregisterReceiver(bluetoothReceiver)
         server?.close()
         timer?.cancel()
@@ -155,11 +171,14 @@ class BleServer {
                     .setTimeout(0)
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
                     .build()
-            val dataBuilder = AdvertiseData.Builder().setIncludeDeviceName(true).setIncludeTxPowerLevel(true)
+            // Service UUIDs go in the advertisement; the device name goes in the scan
+            // response so a longer "Manufacturer 12345" name still fits within the limits.
+            val dataBuilder = AdvertiseData.Builder().setIncludeTxPowerLevel(true)
             BleServiceType.serviceTypes.forEach { objectInstance ->
                 dataBuilder.addServiceUuid(ParcelUuid(objectInstance.serviceId))
             }
-            it.startAdvertising(settings, dataBuilder.build(), mAdvertiseCallback)
+            val scanResponse = AdvertiseData.Builder().setIncludeDeviceName(true).build()
+            it.startAdvertising(settings, dataBuilder.build(), scanResponse, mAdvertiseCallback)
         } ?: Log.w(TAG, "Failed to create advertiser")
     }
 
@@ -182,6 +201,77 @@ class BleServer {
     private fun stopAdvertising() {
         if (bluetoothLeAdvertiser == null) return
         bluetoothLeAdvertiser?.stopAdvertising(mAdvertiseCallback)
+    }
+
+    private fun restartAdvertising() {
+        stopAdvertising()
+        startAdvertising()
+    }
+
+    /**
+     * Computes the BLE name to advertise from the currently broadcast ANT+ device,
+     * as "<manufacturer> <deviceId>" (e.g. "Wahoo Fitness 39306"). Prefers the
+     * Cycling Power selection, then falls back to any other selected device.
+     * Returns null when nothing is selected yet.
+     */
+    private fun computeAdvertiseName(): String? {
+        val orderedTypes = listOf(
+                BleServiceType.CpService, BleServiceType.CscService,
+                BleServiceType.HrService, BleServiceType.RscService)
+        for (type in orderedTypes) {
+            val ids = selectedDevices[type] ?: continue
+            val device = antData[type]?.firstOrNull { ids.contains(it.deviceId) } ?: continue
+            val mfg = device.manufacturerName ?: "ANT+"
+            return "$mfg ${device.deviceId}".take(MAX_NAME_LENGTH)
+        }
+        return null
+    }
+
+    /**
+     * Sets the Bluetooth adapter name to match the broadcast device. The name change
+     * is asynchronous, so the advertisement is refreshed on the following tick once
+     * the new name has propagated.
+     */
+    private fun updateAdvertisedName() {
+        val adapter = bluetoothManager?.adapter ?: return
+        val desired = computeAdvertiseName() ?: return
+        try {
+            if (adapter.name != desired) {
+                adapter.name = desired
+                pendingReAdvertise = true
+            } else if (pendingReAdvertise) {
+                pendingReAdvertise = false
+                restartAdvertising()
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Missing BLUETOOTH_CONNECT permission to set device name", e)
+        }
+    }
+
+    private fun saveOriginalNameIfNeeded(context: Context, adapter: BluetoothAdapter) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        // Store the original name only on the first clean start; if a previous run
+        // crashed without restoring, the stored value is still the real original.
+        if (!prefs.contains(KEY_ORIGINAL_NAME)) {
+            try {
+                adapter.name?.let { prefs.edit().putString(KEY_ORIGINAL_NAME, it).apply() }
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Cannot read Bluetooth name", e)
+            }
+        }
+    }
+
+    private fun restoreOriginalName() {
+        val adapter = bluetoothManager?.adapter ?: return
+        val prefs = context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE) ?: return
+        val original = prefs.getString(KEY_ORIGINAL_NAME, null) ?: return
+        try {
+            adapter.name = original
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Cannot restore Bluetooth name", e)
+        }
+        // Intentionally keep the stored original name: setName() is async, so a quick
+        // stop/start would otherwise re-capture the still-overridden name as "original".
     }
 
     private fun checkBluetoothSupport(bluetoothAdapter: BluetoothAdapter?, packageManager: PackageManager): Boolean {
