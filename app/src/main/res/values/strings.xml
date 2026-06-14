@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">CSC BLE Bridge</string>
+    <string name="app_name">CSC BLE Bridge (Power)</string>
     <string name="start_service">Start BLE Bridging</string>
     <string name="stop_service">Stop BLE Bridging</string>
     <string name="no_data">---</string>
