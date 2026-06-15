@@ -1,5 +1,6 @@
 package idv.markkuo.cscblebridge.service
 
+import android.annotation.SuppressLint
 import android.app.*
 import android.content.Context
 import android.content.Intent
@@ -7,6 +8,7 @@ import android.graphics.Color
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import idv.markkuo.cscblebridge.LaunchActivity
@@ -21,7 +23,13 @@ class MainService : Service() {
         private const val MAIN_CHANNEL_NAME = "CscService"
         private const val ONGOING_NOTIFICATION_ID = 9999
         private const val STOP_SELF_ACTION = "stop_self"
+        private const val WAKE_LOCK_TAG = "AntCast::BridgeWakeLock"
     }
+
+    // Keeps the CPU running while bridging so BLE advertising and ANT+ data
+    // processing continue with the screen off (otherwise Doze stops the bridge
+    // and the consuming app loses the signal).
+    private var wakeLock: PowerManager.WakeLock? = null
 
     interface MainServiceListener {
         fun searching(isSearching: Boolean)
@@ -37,6 +45,7 @@ class MainService : Service() {
     override fun onCreate() {
         super.onCreate()
         startServiceInForeground()
+        acquireWakeLock()
         bridge.startup(this) {
             val newDevices = bridge.antDevices.values.toList()
             listeners.forEach {
@@ -119,6 +128,28 @@ class MainService : Service() {
         }
     }
 
+    @SuppressLint("WakelockTimeout")
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) {
+            return
+        }
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        // No timeout: held for the whole bridging session, released in stopSearching().
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
+            setReferenceCounted(false)
+            acquire()
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+        wakeLock = null
+    }
+
     private fun cleanup() {
         listeners.forEach { it.onDevicesUpdated(emptyList(), emptyMap()) }
         listeners.forEach { it.searching(false) }
@@ -127,6 +158,7 @@ class MainService : Service() {
     fun stopSearching() {
         cleanup()
         bridge.stop()
+        releaseWakeLock()
         stopSelf()
     }
 
